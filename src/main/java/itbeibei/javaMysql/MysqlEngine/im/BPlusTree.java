@@ -66,7 +66,6 @@ public class BPlusTree {
         Node node = Node.loadNode(this, nodeUid);
         boolean isLeaf = node.isLeaf();
         node.release();
-
         if(isLeaf) {
             return nodeUid;
         } else {
@@ -107,6 +106,25 @@ public class BPlusTree {
         return uids;
     }
 
+    public boolean delete(long uid) throws Exception {
+        long rootUid = rootUid();
+        long leafUid = searchLeaf(rootUid, 0);
+        while (true){
+            Node leaf = Node.loadNode(this, leafUid);
+            int res = leaf.delete(uid);
+            if(res == Node.DELETE_OK) {
+                leaf.release();
+                break;
+            }else if(res == Node.DELETE_NEXT) {
+                leaf.release();
+                leafUid = Node.getRawSibling(leaf.raw);
+            }else {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public void insert(long key, long uid) throws Exception {
         long rootUid = rootUid();
         InsertRes res = insert(rootUid, uid, key);
@@ -139,6 +157,8 @@ public class BPlusTree {
         }
         return res;
     }
+
+
 
     private InsertRes insertAndSplit(long nodeUid, long uid, long key) throws Exception {
         while(true) {

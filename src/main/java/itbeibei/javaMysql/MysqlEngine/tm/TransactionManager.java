@@ -18,6 +18,7 @@ public interface TransactionManager {
     boolean isCommitted(long xid);   //查询一个事务的状态是否是已提交
     boolean isAborted(long xid);     //查寻一个事务的状态是否是已取消
     void close();                    //关闭TM
+    long getXidCounter();
 
 
     //创建XID文件

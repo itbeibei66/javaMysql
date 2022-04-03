@@ -19,6 +19,10 @@ public class Node {
     static final int BALANCE_NUMBER = 32;
     static final int NODE_SIZE = NODE_HEADER_SIZE + (2*8)*(BALANCE_NUMBER*2+2);
 
+    static final int DELETE_OK = 0;
+    static final int DELETE_NEXT = 1;
+    static final int DELETE_FALSE = 2;
+
     BPlusTree tree;
     DataItem dataItem;
     SubArray raw;
@@ -82,6 +86,14 @@ public class Node {
         int end = raw.start+NODE_SIZE-1;
         for(int i = end; i >= begin; i --) {
             raw.raw[i] = raw.raw[i-(8*2)];
+        }
+    }
+
+    static void shiftRawKth2(SubArray raw, int kth) {
+        int begin = raw.start+NODE_HEADER_SIZE+(kth)*(8*2);
+        int end = raw.start+NODE_SIZE-1-8*2;
+        for(int i = begin; i <= end; i++) {
+            raw.raw[i] = raw.raw[i+(8*2)];
         }
     }
 
@@ -237,6 +249,35 @@ public class Node {
             }
         } finally {
             if(err == null && success) {
+                dataItem.after(TransactionManagerImpl.SUPER_XID);
+            } else {
+                dataItem.unBefore();
+            }
+        }
+    }
+
+    public int delete(long uid) {
+        Exception err = null;
+        dataItem.before();
+        try {
+            int noKeys = getRawNoKeys(raw);
+            int kth = 0;
+            while(kth < noKeys) {
+                long u = getRawKthSon(raw, kth);
+                if(uid == u){
+                    shiftRawKth2(raw, kth);
+                    setRawNoKeys(raw, noKeys-1);
+                    return DELETE_OK;
+                }
+                kth++;
+            }
+            if(kth == noKeys && getRawSibling(raw) != 0) return DELETE_NEXT;
+            return DELETE_FALSE;
+        } catch (Exception e){
+            err = e;
+            return DELETE_FALSE;
+        }finally {
+            if(err == null){
                 dataItem.after(TransactionManagerImpl.SUPER_XID);
             } else {
                 dataItem.unBefore();

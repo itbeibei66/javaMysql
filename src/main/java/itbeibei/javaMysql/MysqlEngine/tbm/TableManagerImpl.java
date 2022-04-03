@@ -5,11 +5,9 @@ import itbeibei.javaMysql.MysqlEngine.Parser.statement.*;
 import itbeibei.javaMysql.MysqlEngine.dm.DataManager;
 import itbeibei.javaMysql.MysqlEngine.utils.Parser;
 import itbeibei.javaMysql.MysqlEngine.vm.VersionManager;
+import itbeibei.javaMysql.MysqlEngine.vm.VersionManagerImpl;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -152,5 +150,39 @@ public class TableManagerImpl implements TableManager {
         }
         int count = table.delete(xid, delete);
         return ("delete " + count).getBytes();
+    }
+
+    @Override
+    public Map<String,List<Long>> readAllKeyUid() throws Exception {
+        Map<String, List<Long>> res = new HashMap<>();
+        Set<String> tbName = tableCache.keySet();
+        List<Table> tables = new ArrayList<>();
+        lock.lock();
+        for(String name : tbName){
+            tables.add(tableCache.get(name));
+        }
+        lock.unlock();
+        for(Table tb : tables){
+            res.put(tb.name, tb.readAllKeyUid());
+        }
+        return res;
+    }
+
+    @Override
+    public void deleteDeprecatedData() throws Exception {
+        Map<String, List<Long>> map = readAllKeyUid();
+        long minActiveTransaction = vm.getMinActiveTransaction();
+        for(String tbName : map.keySet()){
+            lock.lock();
+            Table table = tableCache.get(tbName);
+            lock.unlock();
+            for(Long u : map.get(tbName)){
+                long l = table.readOneUidXmax(u);
+                if(l != 0 && vm.isCommited(l) && l < minActiveTransaction){
+                    dm.setDataItemInvalid(u);
+                    table.delete(u);
+                }
+            }
+        }
     }
 }

@@ -56,6 +56,18 @@ public class Entry {
         }
     }
 
+    public byte[] allData() {
+        dataItem.rLock();
+        try {
+            SubArray sa = dataItem.data();
+            byte[] data = new byte[sa.end - sa.start];
+            System.arraycopy(sa.raw, sa.start, data, 0, data.length);
+            return data;
+        }finally {
+            dataItem.rUnLock();
+        }
+    }
+
     public long getXmin() {
         dataItem.rLock();
         try {

@@ -97,6 +97,10 @@ public class Field {
         bt.insert(uKey, uid);
     }
 
+    public boolean delete(long uid) throws Exception {
+        return bt.delete(uid);
+    }
+
     public List<Long> search(long left, long right) throws Exception {
         return bt.searchRange(left, right);
     }

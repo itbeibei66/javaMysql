@@ -12,6 +12,8 @@ import itbeibei.javaMysql.MysqlEngine.vm.VersionManagerImpl;
 import org.apache.commons.cli.*;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class Launcher {
     public static final int port = 6001;
@@ -30,10 +32,10 @@ public class Launcher {
         if(method.equals("create") && flags){
             createDB(address);
             System.out.println("Usage: launcher (create) DBPath");
-        }else if(method.equals("open")){
-            //1<<17表示128kb，即使用128kb的空间
+        }else if(!flags || method.equals("open")){
+            //1<<17表示1MB，即使用1MB的空间
             System.out.println("Usage: launcher (open) DBPath");
-            openDB(address,1<<17);
+            openDB(address,1<<20);
         }else{
             Panic.panic(Error.InvalidArgumentsException);
         }
@@ -54,11 +56,15 @@ public class Launcher {
         DataManager dm = DataManager.open(path, mem, tm);
         VersionManager vm = new VersionManagerImpl(tm, dm);
         TableManager tbm = TableManager.open(path, vm, dm);
-
+        Runnable r= new Clear(tbm);
+        Thread t = new Thread(r,"t1");
+        t.start();
         new ServerSocket(port,tbm);
         //new Server(port, tbm).start();
         System.out.println("The DB has been closed");
     }
+
+
 
     private static long parseMem(String memStr) {
         if(memStr == null || "".equals(memStr)) {
@@ -80,5 +86,31 @@ public class Launcher {
                 Panic.panic(Error.InvalidMemException);
         }
         return DEFALUT_MEM;
+    }
+}
+class Clear implements Runnable {
+    private TableManager tbm;
+    private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    public Clear(TableManager tbm) {
+        this.tbm = tbm;
+    }
+    private long time = 1000*60*60;
+    @Override
+    public void run() {
+        try {
+            System.out.println("the clear thread is going to work");
+            while(true){
+                Thread.sleep(time);
+                Date date = new Date();
+                String format = simpleDateFormat.format(date);
+                System.out.println("the  clear time: "+ format);
+                System.out.println("Clear the DeprecatedData, Clear the BPlusTree");
+                tbm.deleteDeprecatedData();
+                System.out.println("Clear over");
+                System.out.println("the next clear will be in "+ time/1000 +" seconds");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

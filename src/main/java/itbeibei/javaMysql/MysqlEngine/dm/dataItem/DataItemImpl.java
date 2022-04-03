@@ -33,6 +33,10 @@ public class DataItemImpl implements DataItem{
         this.pg = pg;
     }
 
+    public void setDataItemRawInvalid(){
+        raw.raw[raw.start+OF_VALID] = 1;
+    }
+
     public boolean isValid() {
         return raw.raw[raw.start+OF_VALID] == (byte)0;
     }

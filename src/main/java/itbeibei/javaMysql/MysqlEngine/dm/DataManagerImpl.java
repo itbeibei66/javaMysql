@@ -12,6 +12,7 @@ import itbeibei.javaMysql.MysqlEngine.dm.pageCache.PageCache;
 import itbeibei.javaMysql.MysqlEngine.dm.pageIndex.PageIndex;
 import itbeibei.javaMysql.MysqlEngine.dm.pageIndex.PageInfo;
 import itbeibei.javaMysql.MysqlEngine.tm.TransactionManager;
+import itbeibei.javaMysql.MysqlEngine.tm.TransactionManagerImpl;
 import itbeibei.javaMysql.MysqlEngine.utils.Panic;
 import itbeibei.javaMysql.MysqlEngine.utils.Types;
 
@@ -40,6 +41,18 @@ public class DataManagerImpl extends AbstractCache<DataItem> implements DataMana
             return null;
         }
         return di;
+    }
+    @Override
+    public void setDataItemInvalid(long uid) throws Exception {
+        DataItemImpl di = (DataItemImpl)super.get(uid);
+        di.before();
+        try {
+            di.setDataItemRawInvalid();
+        }
+        finally {
+            di.after(TransactionManagerImpl.SUPER_XID);
+            di.release();
+        }
     }
 
     @Override

@@ -5,6 +5,9 @@ import itbeibei.javaMysql.MysqlEngine.dm.DataManager;
 import itbeibei.javaMysql.MysqlEngine.utils.Parser;
 import itbeibei.javaMysql.MysqlEngine.vm.VersionManager;
 
+import java.util.List;
+import java.util.Map;
+
 public interface TableManager {
     BeginRes begin(Begin begin);
     byte[] commit(long xid) throws Exception;
@@ -17,6 +20,8 @@ public interface TableManager {
     byte[] read(long xid, Select select) throws Exception;
     byte[] update(long xid, Update update) throws Exception;
     byte[] delete(long xid, Delete delete) throws Exception;
+    Map<String,List<Long>> readAllKeyUid() throws Exception;
+    void deleteDeprecatedData() throws Exception;
 
     public static TableManager create(String path, VersionManager vm, DataManager dm) {
         Booter booter = Booter.create(path);

@@ -79,6 +79,7 @@ public class Recover {
             if(isInsertLog(log)) {
                 InsertLogInfo li = parseInsertLog(log);
                 long xid = li.xid;
+
                 if(!tm.isActive(xid)) {
                     doInsertLog(pc, log, REDO);
                 }
@@ -88,6 +89,7 @@ public class Recover {
                 if(!tm.isActive(xid)) {
                     doUpdateLog(pc, log, REDO);
                 }
+
             }
         }
     }

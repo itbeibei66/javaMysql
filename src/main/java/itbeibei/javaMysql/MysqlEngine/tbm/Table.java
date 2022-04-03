@@ -134,6 +134,18 @@ public class Table {
         return count;
     }
 
+    public List<Long> readAllKeyUid() throws Exception {
+        return parseWhere(null);
+    }
+
+    public long readOneUidXmax(long uid) throws Exception {
+        byte[] raw = ((TableManagerImpl)tbm).vm.SuperRead(uid);
+        byte[] res = new byte[8];
+        System.arraycopy(raw , 8 ,res ,0 , res.length);
+        long l = Parser.parseLong(res);
+        return l;
+    }
+
     public String read(long xid, Select read) throws Exception {
         List<Long> uids = parseWhere(read.where);
         StringBuilder sb = new StringBuilder();
@@ -153,6 +165,14 @@ public class Table {
         for (Field field : fields) {
             if(field.isIndexed()) {
                 field.insert(entry.get(field.fieldName), uid);
+            }
+        }
+    }
+
+    public void delete(long uid) throws Exception {
+        for (Field field : fields) {
+            if(field.isIndexed()) {
+                field.delete(uid);
             }
         }
     }

@@ -9,9 +9,11 @@ import itbeibei.javaMysql.MysqlEngine.utils.Panic;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 //VM管理器，向上层提供read，insert，delete方法，继承引用计数缓存类
+@SuppressWarnings("All")
 public class VersionManagerImpl extends AbstractCache<Entry> implements VersionManager{
     TransactionManager tm;
     DataManager dm;
@@ -131,6 +133,25 @@ public class VersionManagerImpl extends AbstractCache<Entry> implements VersionM
     }
 
     @Override
+    public byte[] SuperRead(long uid) throws Exception {
+        Entry entry = null;
+        try {
+            entry = super.get(uid);
+        } catch(Exception e) {
+            if(e == Error.NullEntryException) {
+                return null;
+            } else {
+                throw e;
+            }
+        }
+        try {
+            return entry.allData();
+        } finally {
+            entry.release();
+        }
+    }
+
+    @Override
     public long begin(int level) {
         lock.lock();
         try {
@@ -172,6 +193,20 @@ public class VersionManagerImpl extends AbstractCache<Entry> implements VersionM
         internAbort(xid, false);
     }
 
+    @Override
+    public long getMinActiveTransaction() {
+        long res = Long.MAX_VALUE;
+        for(long a : activeTransaction.keySet()){
+            if(a!=0){
+                res = Math.min(res , a);
+            }
+        }
+        if(res == Long.MAX_VALUE) {
+            res = tm.getXidCounter()+1;
+        }
+        return res;
+    }
+
     private void internAbort(long xid, boolean autoAborted) {
         lock.lock();
         Transaction t = activeTransaction.get(xid);
@@ -196,6 +231,10 @@ public class VersionManagerImpl extends AbstractCache<Entry> implements VersionM
             throw Error.NullEntryException;
         }
         return entry;
+    }
+    @Override
+    public boolean isCommited(long xid){
+        return tm.isCommitted(xid);
     }
 
     @Override
