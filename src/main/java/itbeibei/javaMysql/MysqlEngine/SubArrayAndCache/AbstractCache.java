@@ -49,8 +49,17 @@ public abstract class AbstractCache<T> {
 
             // 尝试获取该资源
             if(maxResource > 0 && count == maxResource) {
-                lock.unlock();
-                throw Error.CacheFullException;
+                long min = Long.MAX_VALUE;
+                long minL = 0;
+                for(long l:references.keySet()){
+                    if(references.get(l) < min){
+                        min = references.get(l);
+                        minL = l;
+                    }
+                }
+                releaseOnePage(minL);
+                //lock.unlock();
+                //throw Error.CacheFullException;
             }
             count ++;
             getting.put(key, true);
@@ -76,6 +85,17 @@ public abstract class AbstractCache<T> {
         lock.unlock();
 
         return obj;
+    }
+
+    /**
+     * 强行释放一个页面资源, 相比于之前缓存满了直接报错，这种方式更合适一些
+     * **/
+    protected void releaseOnePage(long key){
+        T obj = cache.get(key);
+        releaseForCache(obj);
+        references.remove(key);
+        cache.remove(key);
+        count--;
     }
 
     /**
