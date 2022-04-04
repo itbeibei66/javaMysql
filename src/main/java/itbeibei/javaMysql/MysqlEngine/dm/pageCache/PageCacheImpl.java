@@ -91,17 +91,28 @@ public class PageCacheImpl extends AbstractCache<Page> implements PageCache {
     public void flushPage(Page pg) {
         flush(pg);
     }
+    //强制刷盘
+    @Override
+    public void flushAllPage() throws Exception {
+        for(int i = 2; i <= pageNumbers.get(); i++) {
+            Page pg = getPage(i);
+            releaseForCache(pg);
+        }
+    }
     //刷盘具体操作
     private void flush(Page pg) {
         int pgno = pg.getPageNumber();
         long offset = pageOffset(pgno);
-
         fileLock.lock();
         try {
+            if(!pg.isDirty()){
+                return;
+            }
             ByteBuffer buf = ByteBuffer.wrap(pg.getData());
             fc.position(offset);
             fc.write(buf);
             fc.force(false);
+            System.out.println("刷盘成功");
         } catch(IOException e) {
             Panic.panic(e);
         } finally {

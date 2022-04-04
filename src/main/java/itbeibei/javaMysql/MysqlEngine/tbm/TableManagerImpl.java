@@ -177,12 +177,17 @@ public class TableManagerImpl implements TableManager {
             Table table = tableCache.get(tbName);
             lock.unlock();
             for(Long u : map.get(tbName)){
-                long l = table.readOneUidXmax(u);
-                if(l != 0 && vm.isCommited(l) && l < minActiveTransaction){
+                long[] res = table.readOneUidX(u);
+                long l1 = res[0]; long l2 = res[1];
+                if( vm.isAborted(l1) || (l2 != 0 && vm.isCommited(l2) && l2 < minActiveTransaction) ) {
                     dm.setDataItemInvalid(u);
                     table.delete(u);
                 }
             }
         }
+    }
+    @Override
+    public void flushAllPage() throws Exception{
+        dm.flushAllPage();
     }
 }

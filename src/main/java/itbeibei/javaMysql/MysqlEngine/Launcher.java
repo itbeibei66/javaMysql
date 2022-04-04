@@ -5,6 +5,7 @@ import itbeibei.javaMysql.MysqlEngine.Server.Server;
 import itbeibei.javaMysql.MysqlEngine.Server.ServerSocket;
 import itbeibei.javaMysql.MysqlEngine.dm.DataManager;
 import itbeibei.javaMysql.MysqlEngine.tbm.TableManager;
+import itbeibei.javaMysql.MysqlEngine.tbm.TableManagerImpl;
 import itbeibei.javaMysql.MysqlEngine.tm.TransactionManager;
 import itbeibei.javaMysql.MysqlEngine.utils.Panic;
 import itbeibei.javaMysql.MysqlEngine.vm.VersionManager;
@@ -103,11 +104,15 @@ class Clear implements Runnable {
                 Thread.sleep(time);
                 Date date = new Date();
                 String format = simpleDateFormat.format(date);
-                System.out.println("the  clear time: "+ format);
+                System.out.println("the clear and flush time: "+ format);
                 System.out.println("Clear the DeprecatedData, Clear the BPlusTree");
                 tbm.deleteDeprecatedData();
                 System.out.println("Clear over");
-                System.out.println("the next clear will be in "+ time/1000 +" seconds");
+                System.out.println("flushAllPage at Now");
+                tbm.flushAllPage();
+                System.out.println("flushAllPage over");
+                System.out.println("the next clear and flush will be in "+ time/1000 +" seconds");
+
             }
         } catch (Exception e) {
             e.printStackTrace();

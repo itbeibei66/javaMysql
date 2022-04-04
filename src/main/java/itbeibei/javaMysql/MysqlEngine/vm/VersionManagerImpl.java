@@ -238,6 +238,11 @@ public class VersionManagerImpl extends AbstractCache<Entry> implements VersionM
     }
 
     @Override
+    public boolean isAborted(long xid){
+        return tm.isAborted(xid);
+    }
+
+    @Override
     protected void releaseForCache(Entry entry) {
         entry.remove();
     }

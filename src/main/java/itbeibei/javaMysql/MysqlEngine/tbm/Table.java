@@ -138,13 +138,21 @@ public class Table {
         return parseWhere(null);
     }
 
-    public long readOneUidXmax(long uid) throws Exception {
+    public long[] readOneUidX(long uid) throws Exception {
         byte[] raw = ((TableManagerImpl)tbm).vm.SuperRead(uid);
-        byte[] res = new byte[8];
-        System.arraycopy(raw , 8 ,res ,0 , res.length);
-        long l = Parser.parseLong(res);
-        return l;
+        byte[] res1 = new byte[8];
+        byte[] res2 = new byte[8];
+        System.arraycopy(raw , 8 ,res1 ,0 , res1.length);
+        long l1 = Parser.parseLong(res1);
+        System.arraycopy(raw , 0 ,res2 ,0 , res2.length);
+        long l2 = Parser.parseLong(res2);
+        long[] res = new long[2];
+        res[0] = l1;
+        res[1] = l2;
+        return res;
     }
+
+
 
     public String read(long xid, Select read) throws Exception {
         List<Long> uids = parseWhere(read.where);

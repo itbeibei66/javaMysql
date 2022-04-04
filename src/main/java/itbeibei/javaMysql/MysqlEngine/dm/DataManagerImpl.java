@@ -106,7 +106,10 @@ public class DataManagerImpl extends AbstractCache<DataItem> implements DataMana
         pageOne.release();
         pc.close();
     }
-
+    @Override
+    public void flushAllPage() throws Exception{
+        pc.flushAllPage();
+    }
     // 为xid生成update日志
     public void logDataItem(long xid, DataItem di) {
         byte[] log = Recover.updateLog(xid, di);

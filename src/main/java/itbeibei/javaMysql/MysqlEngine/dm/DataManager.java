@@ -11,6 +11,7 @@ public interface DataManager {
     long insert(long xid, byte[] data) throws Exception;
     void close();
     void setDataItemInvalid(long uid) throws Exception;
+    void flushAllPage() throws Exception;
     //创建一个DM，要知道DM包含什么，它包含一个页面缓存器，一个日志
     public static DataManager create(String path, long mem, TransactionManager tm) {
         PageCache pc = PageCache.create(path, mem);

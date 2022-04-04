@@ -22,6 +22,7 @@ public interface TableManager {
     byte[] delete(long xid, Delete delete) throws Exception;
     Map<String,List<Long>> readAllKeyUid() throws Exception;
     void deleteDeprecatedData() throws Exception;
+    void flushAllPage() throws Exception;
 
     public static TableManager create(String path, VersionManager vm, DataManager dm) {
         Booter booter = Booter.create(path);

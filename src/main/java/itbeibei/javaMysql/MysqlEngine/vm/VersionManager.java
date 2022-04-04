@@ -15,6 +15,7 @@ public interface VersionManager {
 
     long getMinActiveTransaction();
     boolean isCommited(long xid);
+    boolean isAborted(long xid);
     public static VersionManager newVersionManager(TransactionManager tm, DataManager dm) {
         return new VersionManagerImpl(tm, dm);
     }
