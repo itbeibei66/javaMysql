@@ -42,7 +42,9 @@ public class Entry {
     public void remove() {
         dataItem.release();
     }
-
+    public DataItem getDataItem() {
+        return dataItem;
+    }
     // 以拷贝的形式返回内容
     public byte[] data() {
         dataItem.rLock();

@@ -8,4 +8,6 @@ public interface Page {
     boolean isDirty();
     int getPageNumber();
     byte[] getData();
+    void setIsFlushing(boolean isFlushing);
+    boolean getIsFlushing();
 }

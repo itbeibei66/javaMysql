@@ -1,6 +1,8 @@
 package itbeibei.javaMysql.MysqlEngine.SubArrayAndCache;
 
 import itbeibei.javaMysql.Error.Error;
+import itbeibei.javaMysql.MysqlEngine.dm.page.Page;
+import itbeibei.javaMysql.MysqlEngine.dm.page.PageImpl;
 
 import java.util.HashMap;
 import java.util.Set;
@@ -22,6 +24,9 @@ public abstract class AbstractCache<T> {
         references = new HashMap<>();
         getting = new HashMap<>();
         lock = new ReentrantLock();
+    }
+    protected boolean containsKey(long key) {
+        return cache.containsKey(key);
     }
 
     protected T get(long key) throws Exception {
@@ -96,6 +101,10 @@ public abstract class AbstractCache<T> {
         references.remove(key);
         cache.remove(key);
         count--;
+        Page p = (Page) obj;
+        synchronized (p) {
+            p.setIsFlushing(false);
+        }
     }
 
     /**
@@ -114,6 +123,12 @@ public abstract class AbstractCache<T> {
                 references.remove(key);
                 cache.remove(key);
                 count --;
+                if(obj.getClass().isInstance(Page.class)){
+                    Page p = (Page) obj;
+                    synchronized (p) {
+                        p.setIsFlushing(false);
+                    }
+                }
             } else {
                 references.put(key, ref);
             }

@@ -4,6 +4,9 @@ import itbeibei.javaMysql.MysqlEngine.dm.pageCache.PageCache;
 import itbeibei.javaMysql.MysqlEngine.utils.Parser;
 
 import java.util.Arrays;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 /**
  * 普通页
  * 前2个字节标识数据存储的长度
@@ -15,7 +18,7 @@ public class PageX {
     private static final short OF_FREE = 0;
     private static final short OF_DATA = 2;
     public static final int MAX_FREE_SPACE = PageCache.PAGE_SIZE - OF_DATA;
-
+    public static final Lock lock = new ReentrantLock();
     public static byte[] initRaw() {
         byte[] raw = new byte[PageCache.PAGE_SIZE];
         setFSO(raw, OF_DATA);

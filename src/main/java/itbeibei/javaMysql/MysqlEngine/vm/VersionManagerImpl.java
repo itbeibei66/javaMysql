@@ -3,6 +3,7 @@ package itbeibei.javaMysql.MysqlEngine.vm;
 import itbeibei.javaMysql.Error.Error;
 import itbeibei.javaMysql.MysqlEngine.SubArrayAndCache.AbstractCache;
 import itbeibei.javaMysql.MysqlEngine.dm.DataManager;
+import itbeibei.javaMysql.MysqlEngine.dm.page.Page;
 import itbeibei.javaMysql.MysqlEngine.tm.TransactionManager;
 import itbeibei.javaMysql.MysqlEngine.tm.TransactionManagerImpl;
 import itbeibei.javaMysql.MysqlEngine.utils.Panic;
@@ -123,7 +124,14 @@ public class VersionManagerImpl extends AbstractCache<Entry> implements VersionM
                 t.autoAborted = true;
                 throw t.err;
             }
-
+            Page pg = entry.getDataItem().page();
+            boolean isFlushing;
+            synchronized (pg) {
+                isFlushing = pg.getIsFlushing();
+            }
+            if(isFlushing || !containsKey(pg.getPageNumber())){
+                throw Error.PageIsFlushNow;
+            }
             entry.setXmax(xid);
             return true;
 

@@ -32,6 +32,7 @@ public class Visibility {
         if(tm.isCommitted(xmin)) {
             //数据未被删除，可以看见
             if(xmax == 0) return true;
+            //数据如果是自己删除的，不管提交没，都看不见
             if(xmax != xid) {
                 //删除数据的事务未提交，可以看见
                 if(!tm.isCommitted(xmax)) {

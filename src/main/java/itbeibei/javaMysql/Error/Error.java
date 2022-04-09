@@ -45,4 +45,8 @@ public class Error {
     public static final Exception InvalidMemException = new RuntimeException("Invalid memory!");
     public static final Exception NoArguments = new RuntimeException("No Arguments!");
     public static final Exception InvalidArgumentsException = new RuntimeException("Invalid Arguments!");
+
+    //flush
+    public static final Exception SystemIsFlushNow = new RuntimeException("DB is flushPageNow!");
+    public static final Exception PageIsFlushNow = new RuntimeException("this Page is flushNow!");
 }

@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface TableManager {
-    BeginRes begin(Begin begin);
+    BeginRes begin(Begin begin) throws Exception;
     byte[] commit(long xid) throws Exception;
     byte[] abort(long xid);
 

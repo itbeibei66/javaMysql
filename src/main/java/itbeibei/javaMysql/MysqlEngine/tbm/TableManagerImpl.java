@@ -18,7 +18,8 @@ public class TableManagerImpl implements TableManager {
     private Map<String, Table> tableCache;
     private Map<Long, List<Table>> xidTableCache;
     private Lock lock;
-
+    private Lock lock2;
+    private boolean isFlushAllPage;
     TableManagerImpl(VersionManager vm, DataManager dm, Booter booter) {
         this.vm = vm;
         this.dm = dm;
@@ -26,6 +27,7 @@ public class TableManagerImpl implements TableManager {
         this.tableCache = new HashMap<>();
         this.xidTableCache = new HashMap<>();
         lock = new ReentrantLock();
+        lock2 = new ReentrantLock();
         loadTables();
     }
 
@@ -50,7 +52,7 @@ public class TableManagerImpl implements TableManager {
     }
 
     @Override
-    public BeginRes begin(Begin begin) {
+    public BeginRes begin(Begin begin) throws Exception {
         BeginRes res = new BeginRes();
         int level = begin.isRepeatableRead?1:0;
         res.xid = vm.begin(level);
@@ -91,33 +93,49 @@ public class TableManagerImpl implements TableManager {
     }
     @Override
     public byte[] create(long xid, Create create) throws Exception {
-        lock.lock();
-        try {
-            if(tableCache.containsKey(create.tableName)) {
-                throw Error.DuplicatedTableException;
+        lock2.lock();
+        boolean b = isFlushAllPage;
+        lock2.unlock();
+        if(!b){
+            lock.lock();
+            try {
+                if(tableCache.containsKey(create.tableName)) {
+                    throw Error.DuplicatedTableException;
+                }
+                Table table = Table.createTable(this, firstTableUid(), xid, create);
+                updateFirstTableUid(table.uid);
+                tableCache.put(create.tableName, table);
+                if(!xidTableCache.containsKey(xid)) {
+                    xidTableCache.put(xid, new ArrayList<>());
+                }
+                xidTableCache.get(xid).add(table);
+                return ("create " + create.tableName).getBytes();
+            } finally {
+                lock.unlock();
             }
-            Table table = Table.createTable(this, firstTableUid(), xid, create);
-            updateFirstTableUid(table.uid);
-            tableCache.put(create.tableName, table);
-            if(!xidTableCache.containsKey(xid)) {
-                xidTableCache.put(xid, new ArrayList<>());
-            }
-            xidTableCache.get(xid).add(table);
-            return ("create " + create.tableName).getBytes();
-        } finally {
-            lock.unlock();
+        } else{
+            throw Error.SystemIsFlushNow;
         }
+
     }
     @Override
     public byte[] insert(long xid, Insert insert) throws Exception {
-        lock.lock();
-        Table table = tableCache.get(insert.tableName);
-        lock.unlock();
-        if(table == null) {
-            throw Error.TableNotFoundException;
+        lock2.lock();
+        boolean b = isFlushAllPage;
+        lock2.unlock();
+        if(!b){
+            lock.lock();
+            Table table = tableCache.get(insert.tableName);
+            lock.unlock();
+            if(table == null) {
+                throw Error.TableNotFoundException;
+            }
+            table.insert(xid, insert);
+            return "insert".getBytes();
+        }else{
+            throw Error.SystemIsFlushNow;
         }
-        table.insert(xid, insert);
-        return "insert".getBytes();
+
     }
     @Override
     public byte[] read(long xid, Select read) throws Exception {
@@ -131,25 +149,41 @@ public class TableManagerImpl implements TableManager {
     }
     @Override
     public byte[] update(long xid, Update update) throws Exception {
-        lock.lock();
-        Table table = tableCache.get(update.tableName);
-        lock.unlock();
-        if(table == null) {
-            throw Error.TableNotFoundException;
+        lock2.lock();
+        boolean b = isFlushAllPage;
+        lock2.unlock();
+        if(!b){
+            lock.lock();
+            Table table = tableCache.get(update.tableName);
+            lock.unlock();
+            if(table == null) {
+                throw Error.TableNotFoundException;
+            }
+            int count = table.update(xid, update);
+            return ("update " + count).getBytes();
+        }else {
+            throw Error.SystemIsFlushNow;
         }
-        int count = table.update(xid, update);
-        return ("update " + count).getBytes();
+
     }
     @Override
     public byte[] delete(long xid, Delete delete) throws Exception {
-        lock.lock();
-        Table table = tableCache.get(delete.tableName);
-        lock.unlock();
-        if(table == null) {
-            throw Error.TableNotFoundException;
+        lock2.lock();
+        boolean b = isFlushAllPage;
+        lock2.unlock();
+        if(!b){
+            lock.lock();
+            Table table = tableCache.get(delete.tableName);
+            lock.unlock();
+            if(table == null) {
+                throw Error.TableNotFoundException;
+            }
+            int count = table.delete(xid, delete);
+            return ("delete " + count).getBytes();
+        }else {
+            throw Error.SystemIsFlushNow;
         }
-        int count = table.delete(xid, delete);
-        return ("delete " + count).getBytes();
+
     }
 
     @Override
@@ -180,14 +214,25 @@ public class TableManagerImpl implements TableManager {
                 long[] res = table.readOneUidX(u);
                 long l1 = res[0]; long l2 = res[1];
                 if( vm.isAborted(l1) || (l2 != 0 && vm.isCommited(l2) && l2 < minActiveTransaction) ) {
-                    dm.setDataItemInvalid(u);
-                    table.delete(u);
+                    while(true) {
+                        try{
+                            dm.setDataItemInvalid(u);
+                            table.delete(u);
+                            break;
+                        }catch (Exception e){
+                        }
+                    }
+
                 }
             }
         }
     }
     @Override
     public void flushAllPage() throws Exception{
+        lock2.lock();
+        isFlushAllPage = true;
+        lock2.unlock();
         dm.flushAllPage();
+        isFlushAllPage = false;
     }
 }

@@ -12,9 +12,16 @@ public class PageImpl implements Page{
     private byte[] data;
     private boolean dirty;
     private Lock lock;
+    private boolean isFlushing;
 
     private PageCache pc;
 
+    public boolean getIsFlushing() {
+        return isFlushing;
+    }
+    public void setIsFlushing(boolean b){
+        isFlushing = b;
+    }
     public PageImpl(int pageNumber, byte[] data, PageCache pc) {
         this.pageNumber = pageNumber;
         this.data = data;

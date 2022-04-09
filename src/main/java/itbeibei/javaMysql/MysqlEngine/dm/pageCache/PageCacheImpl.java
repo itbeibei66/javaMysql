@@ -43,6 +43,7 @@ public class PageCacheImpl extends AbstractCache<Page> implements PageCache {
         this.fc = fileChannel;
         this.fileLock = new ReentrantLock();
         this.pageNumbers = new AtomicInteger((int)length / PAGE_SIZE);
+
     }
     //新建页面（根据指定的字节数组）
     public int newPage(byte[] initData) {
@@ -79,6 +80,9 @@ public class PageCacheImpl extends AbstractCache<Page> implements PageCache {
     @Override
     protected void releaseForCache(Page pg) {
         if(pg.isDirty()) {
+            synchronized (pg) {
+                pg.setIsFlushing(true);
+            }
             flush(pg);
             pg.setDirty(false);
         }
