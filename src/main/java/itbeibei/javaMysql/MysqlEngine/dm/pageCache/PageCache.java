@@ -28,6 +28,8 @@ public interface PageCache {
     void flushPage(Page pg);
     //强制刷盘
     void flushAllPage() throws Exception;
+    //
+    boolean containsKey(long key);
     //memory表示传入的内存大小，以此来设置最大缓存资源数
     public static PageCacheImpl create(String path, long memory) {
         File f = new File(path+PageCacheImpl.DB_SUFFIX);

@@ -123,7 +123,7 @@ public abstract class AbstractCache<T> {
                 references.remove(key);
                 cache.remove(key);
                 count --;
-                if(obj.getClass().isInstance(Page.class)){
+                if(Page.class.isInstance(obj)){
                     Page p = (Page) obj;
                     synchronized (p) {
                         p.setIsFlushing(false);
@@ -149,6 +149,12 @@ public abstract class AbstractCache<T> {
                 references.remove(key);
                 cache.remove(key);
                 count--;
+                if(Page.class.isInstance(cache.get(key))){
+                    Page p = (Page) cache.get(key);
+                    synchronized (p) {
+                        p.setIsFlushing(false);
+                    }
+                }
             }
         } finally {
             lock.unlock();

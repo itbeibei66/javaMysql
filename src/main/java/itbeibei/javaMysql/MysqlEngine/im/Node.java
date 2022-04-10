@@ -1,7 +1,9 @@
 package itbeibei.javaMysql.MysqlEngine.im;
 
+import itbeibei.javaMysql.Error.Error;
 import itbeibei.javaMysql.MysqlEngine.SubArrayAndCache.SubArray;
 import itbeibei.javaMysql.MysqlEngine.dm.dataItem.DataItem;
+import itbeibei.javaMysql.MysqlEngine.dm.page.Page;
 import itbeibei.javaMysql.MysqlEngine.tm.TransactionManagerImpl;
 import itbeibei.javaMysql.MysqlEngine.utils.Parser;
 
@@ -226,7 +228,14 @@ public class Node {
         boolean success = false;
         Exception err = null;
         InsertAndSplitRes res = new InsertAndSplitRes();
-
+        boolean isFlushing;
+        Page pg = dataItem.page();
+        synchronized (pg) {
+            isFlushing = pg.getIsFlushing();
+        }
+        if(isFlushing || !tree.dm.containsKey(pg.getPageNumber())) {
+            throw Error.PageIsFlushNow;
+        }
         dataItem.before();
         try {
             success = insert(uid, key);
@@ -256,8 +265,16 @@ public class Node {
         }
     }
 
-    public int delete(long uid) {
+    public int delete(long uid) throws Exception {
         Exception err = null;
+        boolean isFlushing;
+        Page pg = dataItem.page();
+        synchronized (pg) {
+            isFlushing = pg.getIsFlushing();
+        }
+        if(isFlushing || !tree.dm.containsKey(pg.getPageNumber())) {
+            throw Error.PageIsFlushNow;
+        }
         dataItem.before();
         try {
             int noKeys = getRawNoKeys(raw);

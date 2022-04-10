@@ -32,6 +32,9 @@ public class DataManagerImpl extends AbstractCache<DataItem> implements DataMana
         this.tm = tm;
         this.pIndex = new PageIndex();
     }
+    public boolean containsKey(long key) {
+        return pc.containsKey(key);
+    }
 
     @Override
     public DataItem read(long uid) throws Exception {

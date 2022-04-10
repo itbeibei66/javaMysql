@@ -23,7 +23,8 @@ public class Launcher {
     public static final long MB = 1 << 20;
     public static final long GB = 1 << 30;
     public static final boolean flags = false;
-    public static void main(String[] args) throws ParseException, IOException {
+    public static void main(String[] args) throws IOException {
+
         if(args == null || args.length!=2){
             Panic.panic(Error.NoArguments);
             return;
@@ -42,6 +43,7 @@ public class Launcher {
         }
 
     }
+
 
     private static void createDB(String path) {
         TransactionManager tm = TransactionManager.create(path);

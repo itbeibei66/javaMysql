@@ -1,15 +1,12 @@
 package itbeibei.javaMysql.client;
 
 
-import itbeibei.javaMysql.MysqlEngine.Server.Executor;
+
 import itbeibei.javaMysql.transport.Encoder;
 import itbeibei.javaMysql.transport.Packager;
 import itbeibei.javaMysql.transport.Transporter;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.nio.channels.SocketChannel;
 
 

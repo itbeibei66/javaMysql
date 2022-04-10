@@ -35,6 +35,8 @@ public class BPlusTree {
         t.dm = dm;
         t.bootDataItem = bootDataItem;
         t.bootLock = new ReentrantLock();
+        //添加release方法
+        bootDataItem.release();
         return t;
     }
 

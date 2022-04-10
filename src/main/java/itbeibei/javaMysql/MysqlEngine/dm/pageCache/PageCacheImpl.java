@@ -45,6 +45,7 @@ public class PageCacheImpl extends AbstractCache<Page> implements PageCache {
         this.pageNumbers = new AtomicInteger((int)length / PAGE_SIZE);
 
     }
+    public boolean containsKey(long key) { return super.containsKey(key);}
     //新建页面（根据指定的字节数组）
     public int newPage(byte[] initData) {
         int pgno = pageNumbers.incrementAndGet();
@@ -95,12 +96,15 @@ public class PageCacheImpl extends AbstractCache<Page> implements PageCache {
     public void flushPage(Page pg) {
         flush(pg);
     }
-    //强制刷盘
+    //强制刷盘所有页，但不清除缓存
     @Override
     public void flushAllPage() throws Exception {
         for(int i = 2; i <= pageNumbers.get(); i++) {
             Page pg = getPage(i);
             releaseForCache(pg);
+            synchronized (pg) {
+                pg.setIsFlushing(false);
+            }
         }
     }
     //刷盘具体操作
