@@ -113,7 +113,7 @@ public abstract class AbstractCache<T> {
     protected void release(long key) {
         lock.lock();
         try {
-            if(!references.containsKey(key)){
+            if((!references.containsKey(key)) || (!cache.containsKey(key))){
                 return;
             }
             int ref = references.get(key)-1;

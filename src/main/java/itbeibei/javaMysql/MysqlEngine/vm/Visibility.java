@@ -13,6 +13,14 @@ public class Visibility {
             return tm.isCommitted(xmax) && (xmax > t.xid || t.isInSnapshot(xmax));
         }
     }
+    //有活跃事务已经对此数据做了删除，虽然自身看的到该事务，但无法删除，否则会影响对方事务
+    public static boolean isActiveTransactionDeleteIt(TransactionManager tm, Transaction t, Entry e) {
+        long xmax = e.getXmax();
+        if(tm.isActive(xmax)){
+            return true;
+        }
+        return false;
+    }
     //level = 0表示读已提交，level = 1表示可重复读
     public static boolean isVisible(TransactionManager tm, Transaction t, Entry e) {
         if(t.level == 0) {

@@ -228,13 +228,19 @@ public class Node {
         boolean success = false;
         Exception err = null;
         InsertAndSplitRes res = new InsertAndSplitRes();
-        boolean isFlushing;
-        Page pg = dataItem.page();
-        synchronized (pg) {
-            isFlushing = pg.getIsFlushing();
-        }
-        if(isFlushing || !tree.dm.containsKey(pg.getPageNumber())) {
-            throw Error.PageIsFlushNow;
+        while(true) {
+            boolean isFlushing;
+            Page pg = dataItem.page();
+            synchronized (pg) {
+                isFlushing = pg.getIsFlushing();
+            }
+            if(isFlushing || !tree.dm.containsKey(pg.getPageNumber())) {
+                //throw Error.PageIsFlushNow;
+                this.release();
+                tree.insert(key, uid);
+            }else{
+                break;
+            }
         }
         dataItem.before();
         try {
@@ -267,14 +273,21 @@ public class Node {
 
     public int delete(long uid) throws Exception {
         Exception err = null;
-        boolean isFlushing;
-        Page pg = dataItem.page();
-        synchronized (pg) {
-            isFlushing = pg.getIsFlushing();
+        while(true) {
+            boolean isFlushing;
+            Page pg = dataItem.page();
+            synchronized (pg) {
+                isFlushing = pg.getIsFlushing();
+            }
+            if(isFlushing || !tree.dm.containsKey(pg.getPageNumber())) {
+                //throw Error.PageIsFlushNow;
+                this.release();
+                tree.delete(uid);
+            }else{
+                break;
+            }
         }
-        if(isFlushing || !tree.dm.containsKey(pg.getPageNumber())) {
-            throw Error.PageIsFlushNow;
-        }
+
         dataItem.before();
         try {
             int noKeys = getRawNoKeys(raw);
@@ -348,7 +361,6 @@ public class Node {
         long son = tree.dm.insert(TransactionManagerImpl.SUPER_XID, nodeRaw.raw);
         setRawNoKeys(raw, BALANCE_NUMBER);
         setRawSibling(raw, son);
-
         SplitRes res = new SplitRes();
         res.newSon = son;
         res.newKey = getRawKthKey(nodeRaw, 0);

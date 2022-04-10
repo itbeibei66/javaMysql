@@ -48,13 +48,19 @@ public class DataManagerImpl extends AbstractCache<DataItem> implements DataMana
     @Override
     public void setDataItemInvalid(long uid) throws Exception {
         DataItemImpl di = (DataItemImpl)super.get(uid);
-        Page pg = di.page();
-        boolean isFlushing;
-        synchronized (pg) {
-            isFlushing = pg.getIsFlushing();
-        }
-        if(isFlushing || !containsKey(pg.getPageNumber())){
-            throw Error.PageIsFlushNow;
+        while (true) {
+            Page pg = di.page();
+            boolean isFlushing;
+            synchronized (pg) {
+                isFlushing = pg.getIsFlushing();
+            }
+            if(isFlushing || !containsKey(pg.getPageNumber())){
+                di.release();
+                setDataItemInvalid(uid);
+                //throw Error.PageIsFlushNow;
+            }else {
+                break;
+            }
         }
         di.before();
         try {
@@ -90,14 +96,19 @@ public class DataManagerImpl extends AbstractCache<DataItem> implements DataMana
         Page pg = null;
         int freeSpace = 0;
         try {
-            pg = pc.getPage(pi.pgno);
-            boolean isFlushing;
-            synchronized (pg) {
-                 isFlushing = pg.getIsFlushing();
+            while(true) {
+                pg = pc.getPage(pi.pgno);
+                boolean isFlushing;
+                synchronized (pg) {
+                    isFlushing = pg.getIsFlushing();
+                }
+                if(isFlushing || !containsKey(pi.pgno)){
+                    //throw Error.PageIsFlushNow;
+                }else{
+                    break;
+                }
             }
-            if(isFlushing || !containsKey(pi.pgno)){
-                throw Error.PageIsFlushNow;
-            }
+
             byte[] log = Recover.insertLog(xid, pg, raw);
             logger.log(log);
             short offset = PageX.insert(pg, raw);

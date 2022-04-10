@@ -118,20 +118,27 @@ public class VersionManagerImpl extends AbstractCache<Entry> implements VersionM
                 return false;
             }
 
-            if(Visibility.isVersionSkip(tm, t, entry)) {
+            if(Visibility.isVersionSkip(tm, t, entry) || Visibility.isActiveTransactionDeleteIt(tm, t, entry)) {
                 t.err = Error.ConcurrentUpdateException;
                 internAbort(xid, true);
                 t.autoAborted = true;
                 throw t.err;
             }
-            Page pg = entry.getDataItem().page();
-            boolean isFlushing;
-            synchronized (pg) {
-                isFlushing = pg.getIsFlushing();
+            while (true) {
+                Page pg = entry.getDataItem().page();
+                boolean isFlushing;
+                synchronized (pg) {
+                    isFlushing = pg.getIsFlushing();
+                }
+                if(isFlushing || !dm.containsKey(pg.getPageNumber())){
+                    entry.release();
+                    delete(xid,uid);
+                    //throw Error.PageIsFlushNow;
+                }else{
+                    break;
+                }
             }
-            if(isFlushing || !containsKey(pg.getPageNumber())){
-                throw Error.PageIsFlushNow;
-            }
+
             entry.setXmax(xid);
             return true;
 
