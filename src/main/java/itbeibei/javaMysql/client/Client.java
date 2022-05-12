@@ -12,7 +12,7 @@ public class Client {
 
     public byte[] execute(byte[] stat) throws Exception {
         Package pkg = new Package(stat, null);
-        Package resPkg = rt.roundTrip(pkg);
+        Package resPkg = rt.roundTrip2(pkg);
         if(resPkg.getErr() != null) {
             throw resPkg.getErr();
         }

@@ -1,5 +1,6 @@
 package itbeibei.javaMysql.MysqlEngine.Server;
 
+import com.google.common.primitives.Bytes;
 import itbeibei.javaMysql.Error.Error;
 import itbeibei.javaMysql.MysqlEngine.Parser.Parser;
 import itbeibei.javaMysql.MysqlEngine.Parser.statement.*;
@@ -52,6 +53,7 @@ public class Executor {
     }
 
     private byte[] execute2(Object stat) throws Exception {
+        long begin = System.currentTimeMillis();
         boolean tmpTransaction = false;
         Exception e = null;
         if(xid == 0) {
@@ -63,7 +65,6 @@ public class Executor {
             byte[] res = null;
             if(Show.class.isInstance(stat)) {
                 res = tbm.show(xid);
-
             } else if(Create.class.isInstance(stat)) {
                 res = tbm.create(xid, (Create)stat);
             } else if(Select.class.isInstance(stat)) {
@@ -75,6 +76,9 @@ public class Executor {
             } else if(Update.class.isInstance(stat)) {
                 res = tbm.update(xid, (Update)stat);
             }
+            long l = System.currentTimeMillis() - begin;
+            String s = "\n本次操作花费时间为 " + l + " 毫秒";
+            res = Bytes.concat(res, s.getBytes());
             return res;
         } catch(Exception e1) {
             e = e1;

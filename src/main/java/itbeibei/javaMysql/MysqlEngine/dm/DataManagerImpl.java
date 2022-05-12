@@ -35,7 +35,8 @@ public class DataManagerImpl extends AbstractCache<DataItem> implements DataMana
     public boolean containsKey(long key) {
         return pc.containsKey(key);
     }
-
+    @Override
+    protected void pcReleaseAllPage() {}
     @Override
     public DataItem read(long uid) throws Exception {
         DataItemImpl di = (DataItemImpl)super.get(uid);
@@ -48,6 +49,7 @@ public class DataManagerImpl extends AbstractCache<DataItem> implements DataMana
     @Override
     public void setDataItemInvalid(long uid) throws Exception {
         DataItemImpl di = (DataItemImpl)super.get(uid);
+        /*
         while (true) {
             Page pg = di.page();
             boolean isFlushing;
@@ -61,7 +63,7 @@ public class DataManagerImpl extends AbstractCache<DataItem> implements DataMana
             }else {
                 break;
             }
-        }
+        }*/
         di.before();
         try {
             di.setDataItemRawInvalid();
@@ -96,19 +98,22 @@ public class DataManagerImpl extends AbstractCache<DataItem> implements DataMana
         Page pg = null;
         int freeSpace = 0;
         try {
+            /*
             while(true) {
-                pg = pc.getPage(pi.pgno);
+
                 boolean isFlushing;
                 synchronized (pg) {
                     isFlushing = pg.getIsFlushing();
                 }
                 if(isFlushing || !containsKey(pi.pgno)){
                     //throw Error.PageIsFlushNow;
+                    pg.release();
                 }else{
                     break;
                 }
-            }
 
+            }*/
+            pg = pc.getPage(pi.pgno);
             byte[] log = Recover.insertLog(xid, pg, raw);
             logger.log(log);
             short offset = PageX.insert(pg, raw);

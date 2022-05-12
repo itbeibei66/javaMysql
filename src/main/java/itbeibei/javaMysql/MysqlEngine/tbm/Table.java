@@ -99,7 +99,6 @@ public class Table {
     }
 
     public int update(long xid, Update update) throws Exception {
-        List<Long> uids = parseWhere(update.where);
         Field fd = null;
         for (Field f : fields) {
             if(f.fieldName.equals(update.fieldName)) {
@@ -110,26 +109,31 @@ public class Table {
         if(fd == null) {
             throw Error.FieldNotFoundException;
         }
+        List<Long> uids = parseWhere(update.where);
         Object value = fd.string2Value(update.value);
         int count = 0;
         for (Long uid : uids) {
             byte[] raw = ((TableManagerImpl)tbm).vm.read(xid, uid);
             if(raw == null) continue;
 
-            ((TableManagerImpl)tbm).vm.delete(xid, uid);
+            if(!((TableManagerImpl)tbm).vm.delete(xid, uid)) {
+                return update(xid, update);
+            }else {
+                Map<String, Object> entry = parseEntry(raw);
+                entry.put(fd.fieldName, value);
+                raw = entry2Raw(entry);
+                long uuid = ((TableManagerImpl)tbm).vm.insert(xid, raw);
 
-            Map<String, Object> entry = parseEntry(raw);
-            entry.put(fd.fieldName, value);
-            raw = entry2Raw(entry);
-            long uuid = ((TableManagerImpl)tbm).vm.insert(xid, raw);
+                count ++;
 
-            count ++;
-
-            for (Field field : fields) {
-                if(field.isIndexed()) {
-                    field.insert(entry.get(field.fieldName), uuid);
+                for (Field field : fields) {
+                    if(field.isIndexed()) {
+                        field.insert(entry.get(field.fieldName), uuid);
+                    }
                 }
             }
+
+
         }
         return count;
     }
@@ -142,9 +146,9 @@ public class Table {
         byte[] raw = ((TableManagerImpl)tbm).vm.SuperRead(uid);
         byte[] res1 = new byte[8];
         byte[] res2 = new byte[8];
-        System.arraycopy(raw , 8 ,res1 ,0 , res1.length);
+        System.arraycopy(raw , 0 ,res1 ,0 , res1.length);
         long l1 = Parser.parseLong(res1);
-        System.arraycopy(raw , 0 ,res2 ,0 , res2.length);
+        System.arraycopy(raw , 8 ,res2 ,0 , res2.length);
         long l2 = Parser.parseLong(res2);
         long[] res = new long[2];
         res[0] = l1;
@@ -155,13 +159,30 @@ public class Table {
 
 
     public String read(long xid, Select read) throws Exception {
+        if(!("*".equals(read.fields[0]) && read.fields.length == 1)) {
+            for(String f : read.fields) {
+                boolean falg = false;
+                for(Field f2 : fields) {
+                    if(f.equals(f2.fieldName)) {
+                        falg = true;
+                        break;
+                    }
+                }
+                if(!falg) throw Error.FieldNotFoundException;
+            }
+        }
         List<Long> uids = parseWhere(read.where);
         StringBuilder sb = new StringBuilder();
         for (Long uid : uids) {
             byte[] raw = ((TableManagerImpl)tbm).vm.read(xid, uid);
             if(raw == null) continue;
             Map<String, Object> entry = parseEntry(raw);
-            sb.append(printEntry(entry)).append("\n");
+            if("*".equals(read.fields[0])) {
+                sb.append(printEntry(entry)).append("\n");
+            }else {
+                sb.append(printEntry(entry, read.fields)).append("\n");
+            }
+
         }
         return sb.toString();
     }
@@ -273,11 +294,32 @@ public class Table {
         return res;
     }
 
+    private String printEntry(Map<String, Object> entry, String[] fields) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < fields.length; i++) {
+            String name = fields[i];
+            Field f = null;
+            for(Field tmp : this.fields) {
+                if(tmp.fieldName.equals(name)) {
+                    f = tmp;
+                    break;
+                }
+            }
+            sb.append(f.printValue(entry.get(name)));
+            if(i == fields.length-1) {
+                sb.append("]");
+            } else {
+                sb.append(", ");
+            }
+        }
+        return sb.toString();
+    }
+
     private String printEntry(Map<String, Object> entry) {
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < fields.size(); i++) {
-            Field field = fields.get(i);
-            sb.append(field.printValue(entry.get(field.fieldName)));
+            Field f = fields.get(i);
+            sb.append(f.printValue(entry.get(f.fieldName)));
             if(i == fields.size()-1) {
                 sb.append("]");
             } else {

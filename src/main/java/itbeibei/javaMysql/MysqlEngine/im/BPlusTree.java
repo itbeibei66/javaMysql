@@ -17,9 +17,9 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class BPlusTree {
     DataManager dm;
-    private long bootUid;
-    private DataItem bootDataItem;
-    private Lock bootLock;
+    long bootUid;
+    DataItem bootDataItem;
+    Lock bootLock;
 
     public static long create(DataManager dm) throws Exception {
         byte[] rawRoot = Node.newNilRootRaw();
@@ -36,7 +36,8 @@ public class BPlusTree {
         t.bootDataItem = bootDataItem;
         t.bootLock = new ReentrantLock();
         //添加release方法
-        t.bootDataItem.release();
+        //添加此行，每次有修改都进行刷盘
+        //t.bootDataItem.release();
         return t;
     }
 
@@ -114,11 +115,10 @@ public class BPlusTree {
         while (true){
             Node leaf = Node.loadNode(this, leafUid);
             int res = leaf.delete(uid);
+            leaf.release();
             if(res == Node.DELETE_OK) {
-                leaf.release();
                 break;
             }else if(res == Node.DELETE_NEXT) {
-                leaf.release();
                 leafUid = Node.getRawSibling(leaf.raw);
             }else {
                 return false;

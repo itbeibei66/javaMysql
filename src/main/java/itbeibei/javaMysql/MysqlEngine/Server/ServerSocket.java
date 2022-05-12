@@ -19,12 +19,13 @@ import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class ServerSocket {
     private int port;
-    TableManager tbm;
+    private TableManager tbm;
     public static AtomicInteger NumbersOfClient = new AtomicInteger(0);
     //解码buffer
     // private CharsetDecoder decode = Charset.forName("UTF-8").newDecoder();
@@ -39,10 +40,11 @@ public class ServerSocket {
     private Map<String, Executor> executorMap = new HashMap<>();
     private int i=0;
     private Encoder e = new Encoder();
-
+    private ThreadPoolExecutor tpe;
     public ServerSocket(int port, TableManager tbm){
         this.port = port;
         this.tbm = tbm;
+        this.tpe = new ThreadPoolExecutor(10, 20, 1L, TimeUnit.SECONDS, new ArrayBlockingQueue<>(100), new ThreadPoolExecutor.CallerRunsPolicy());
         try {
             init();
             listen();
@@ -85,10 +87,11 @@ public class ServerSocket {
         }
     }
 
+
     /**
      * 处理不同的事件
      */
-    private void handle(SelectionKey selectionKey) throws Exception {
+    public void handle(SelectionKey selectionKey) throws Exception {
 
         ServerSocketChannel server;
         SocketChannel client;
@@ -107,7 +110,7 @@ public class ServerSocket {
             Transporter t = new Transporter(client.socket());
             Executor exe = new Executor(tbm);
             Packager packager = new Packager(t, e, exe);
-            clientsMap.put(client.getLocalAddress().toString().substring(1)+ i++,client);
+            clientsMap.put(client.getLocalAddress().toString().substring(1)+ i++, client);
 
             client.register(selector, SelectionKey.OP_READ);
             NumbersOfClient.getAndIncrement();
@@ -128,6 +131,7 @@ public class ServerSocket {
             Transporter t = transporterMap.get(s);
             Executor exe = executorMap.get(s);
             Packager packager = packagerMap.get(s);
+
             Package pkg = null;
             try {
                 pkg = packager.receive2();
@@ -137,27 +141,45 @@ public class ServerSocket {
             if(pkg == null){
                 return;
             }
-            byte[] sql = pkg.getData();
-            byte[] result = null;
-            Exception e3 = null;
-            try {
-                result = exe.execute(sql);
-            } catch (Exception e1) {
-                e3 = e1;
-                e3.printStackTrace();
-            }
-            pkg = new Package(result, e3);
-            try {
-                packager.send2(pkg);
-            } catch (Exception e1) {
-                e1.printStackTrace();
-            }
-            //client = (SocketChannel) selectionKey.channel();
-            //client.register(selector, SelectionKey.OP_READ);
+            Callable<Package> r = new Handler(exe, pkg, packager);
+            FutureTask<Package> f = new FutureTask<>(r);
+            tpe.submit(f);
+            client.register(selector, SelectionKey.OP_READ);
 
 
         }
 
 
+    }
+}
+class Handler implements Callable<Package> {
+    private Executor exe;
+    private Package pkg;
+    private Packager packager;
+    public Handler(Executor exe, Package pkg, Packager packager) {
+       this.exe = exe;
+       this.pkg = pkg;
+       this.packager = packager;
+    }
+
+
+    @Override
+    public Package call() {
+        byte[] sql = pkg.getData();
+        byte[] result = null;
+        Exception e3 = null;
+        try {
+            result = exe.execute(sql);
+        } catch (Exception e1) {
+            e3 = e1;
+            e3.printStackTrace();
+        }
+        pkg = new Package(result, e3);
+        try {
+            packager.send2(pkg);
+        } catch (Exception e1) {
+            e1.printStackTrace();
+        }
+        return null;
     }
 }

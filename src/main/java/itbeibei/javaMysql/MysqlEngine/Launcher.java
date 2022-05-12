@@ -35,7 +35,7 @@ public class Launcher {
             createDB(address);
             System.out.println("Usage: launcher (create) DBPath");
         }else if(!flags || method.equals("open")){
-            //1<<17表示1MB，即使用1MB的空间
+
             System.out.println("Usage: launcher (open) DBPath");
             openDB(address,1<<20);
         }else{
@@ -62,8 +62,8 @@ public class Launcher {
         Runnable r= new Clear(tbm);
         Thread t = new Thread(r,"t1");
         t.start();
-        new ServerSocket(port,tbm);
-        //new Server(port, tbm).start();
+        //new ServerSocket(port,tbm);
+        new Server(port, tbm).start();
         System.out.println("The DB has been closed");
     }
 
@@ -97,13 +97,13 @@ class Clear implements Runnable {
     public Clear(TableManager tbm) {
         this.tbm = tbm;
     }
-    private long time = 1000*60*60;
+    private long DEFUALT_TIME = 1000 * 60 * 60 * 24;
     @Override
     public void run() {
         try {
             System.out.println("the clear thread is going to work");
             while(true){
-                Thread.sleep(time);
+                Thread.sleep(DEFUALT_TIME);
                 Date date = new Date();
                 String format = simpleDateFormat.format(date);
                 System.out.println("the clear and flush time: "+ format);
@@ -113,7 +113,7 @@ class Clear implements Runnable {
                 System.out.println("flushAllPage at Now");
                 tbm.flushAllPage();
                 System.out.println("flushAllPage over");
-                System.out.println("the next clear and flush will be in "+ time/1000 +" seconds");
+                System.out.println("the next clear and flush will be in "+ DEFUALT_TIME/1000 +" seconds");
 
             }
         } catch (Exception e) {

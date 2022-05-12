@@ -228,6 +228,7 @@ public class Node {
         boolean success = false;
         Exception err = null;
         InsertAndSplitRes res = new InsertAndSplitRes();
+        /*
         while(true) {
             boolean isFlushing;
             Page pg = dataItem.page();
@@ -241,7 +242,7 @@ public class Node {
             }else{
                 break;
             }
-        }
+        }*/
         dataItem.before();
         try {
             success = insert(uid, key);
@@ -273,6 +274,7 @@ public class Node {
 
     public int delete(long uid) throws Exception {
         Exception err = null;
+        /*
         while(true) {
             boolean isFlushing;
             Page pg = dataItem.page();
@@ -286,7 +288,7 @@ public class Node {
             }else{
                 break;
             }
-        }
+        }*/
 
         dataItem.before();
         try {

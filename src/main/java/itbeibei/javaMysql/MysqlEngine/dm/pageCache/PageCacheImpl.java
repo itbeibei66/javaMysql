@@ -50,7 +50,9 @@ public class PageCacheImpl extends AbstractCache<Page> implements PageCache {
     public int newPage(byte[] initData) {
         int pgno = pageNumbers.incrementAndGet();
         Page pg = new PageImpl(pgno, initData, null);
+        pg.setDirty(true);
         flush(pg);
+        pg.setDirty(false);
         return pgno;
     }
     //根据页面编号从缓存中返回一个页面
@@ -81,9 +83,10 @@ public class PageCacheImpl extends AbstractCache<Page> implements PageCache {
     @Override
     protected void releaseForCache(Page pg) {
         if(pg.isDirty()) {
+            /*
             synchronized (pg) {
                 pg.setIsFlushing(true);
-            }
+            }*/
             flush(pg);
             pg.setDirty(false);
         }
@@ -95,18 +98,27 @@ public class PageCacheImpl extends AbstractCache<Page> implements PageCache {
     //刷盘
     public void flushPage(Page pg) {
         flush(pg);
+        pg.setDirty(false);
     }
     //强制刷盘所有页，但不清除缓存
     @Override
     public void flushAllPage() throws Exception {
+        super.releaseAllPage();
+    }
+
+    @Override
+    protected void pcReleaseAllPage() throws Exception{
         for(int i = 2; i <= pageNumbers.get(); i++) {
             Page pg = getPage(i);
             releaseForCache(pg);
+            /*
             synchronized (pg) {
                 pg.setIsFlushing(false);
             }
+            */
         }
     }
+
     //刷盘具体操作
     private void flush(Page pg) {
         int pgno = pg.getPageNumber();

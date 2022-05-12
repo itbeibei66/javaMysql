@@ -92,6 +92,14 @@ public abstract class AbstractCache<T> {
         return obj;
     }
 
+    protected void releaseAllPage() throws Exception{
+        lock.lock();
+        pcReleaseAllPage();
+        lock.unlock();
+    }
+
+    protected abstract void pcReleaseAllPage() throws Exception;
+
     /**
      * 强行释放一个页面资源, 相比于之前缓存满了直接报错，这种方式更合适一些
      * **/
@@ -101,10 +109,11 @@ public abstract class AbstractCache<T> {
         references.remove(key);
         cache.remove(key);
         count--;
+        /*
         Page p = (Page) obj;
         synchronized (p) {
             p.setIsFlushing(false);
-        }
+        }*/
     }
 
     /**
@@ -116,19 +125,20 @@ public abstract class AbstractCache<T> {
             if((!references.containsKey(key)) || (!cache.containsKey(key))){
                 return;
             }
-            int ref = references.get(key)-1;
+            int ref = references.get(key) - 1;
             if(ref == 0) {
                 T obj = cache.get(key);
                 releaseForCache(obj);
                 references.remove(key);
                 cache.remove(key);
                 count --;
-                if(Page.class.isInstance(obj)){
+                /*if(Page.class.isInstance(obj)){
                     Page p = (Page) obj;
                     synchronized (p) {
                         p.setIsFlushing(false);
                     }
-                }
+                }*/
+
             } else {
                 references.put(key, ref);
             }
@@ -149,12 +159,13 @@ public abstract class AbstractCache<T> {
                 references.remove(key);
                 cache.remove(key);
                 count--;
+                /*
                 if(Page.class.isInstance(cache.get(key))){
                     Page p = (Page) cache.get(key);
                     synchronized (p) {
                         p.setIsFlushing(false);
                     }
-                }
+                }*/
             }
         } finally {
             lock.unlock();

@@ -31,7 +31,10 @@ public class VersionManagerImpl extends AbstractCache<Entry> implements VersionM
         this.lock = new ReentrantLock();
         this.lt = new LockTable();
     }
+    @Override
+    protected void pcReleaseAllPage() {
 
+    }
     @Override
     public byte[] read(long xid, long uid) throws Exception {
         lock.lock();
@@ -104,14 +107,15 @@ public class VersionManagerImpl extends AbstractCache<Entry> implements VersionM
             try {
                 l = lt.add(xid, uid);
             } catch(Exception e) {
-                t.err = Error.ConcurrentUpdateException;
+                t.err = Error.DeadlockException;
                 internAbort(xid, true);
                 t.autoAborted = true;
                 throw t.err;
             }
             if(l != null) {
-                l.lock();
-                l.unlock();
+                if(!Visibility.isVisible(tm, t, entry)) {
+                    return false;
+                }
             }
 
             if(entry.getXmax() == xid) {
@@ -124,6 +128,7 @@ public class VersionManagerImpl extends AbstractCache<Entry> implements VersionM
                 t.autoAborted = true;
                 throw t.err;
             }
+            /*
             while (true) {
                 Page pg = entry.getDataItem().page();
                 boolean isFlushing;
@@ -137,9 +142,10 @@ public class VersionManagerImpl extends AbstractCache<Entry> implements VersionM
                 }else{
                     break;
                 }
-            }
+            }*/
 
             entry.setXmax(xid);
+            //lt.remove(xid, uid);
             return true;
 
         } finally {

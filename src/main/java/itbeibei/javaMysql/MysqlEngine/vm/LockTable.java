@@ -10,17 +10,18 @@ public class LockTable {
     private Map<Long, List<Long>> x2u;  // 某个XID已经获得的资源的UID列表
     private Map<Long, Long> u2x;        // UID被某个XID持有
     private Map<Long, List<Long>> wait; // 正在等待UID的XID列表
-    private Map<Long, Lock> waitLock;   // 正在等待资源的XID的锁
-    private Map<Long, Long> waitU;      // XID正在等待的UID
-    private Lock lock;
 
+    private Map<Long, List<Long>> waitU;      // XID正在等待的UID列表
+    private Lock lock;
+    private Map<Long, Lock> u2l;
     public LockTable() {
         x2u = new HashMap<>();
         u2x = new HashMap<>();
         wait = new HashMap<>();
-        waitLock = new HashMap<>();
+
         waitU = new HashMap<>();
         lock = new ReentrantLock();
+        u2l = new HashMap<>();
     }
 
     // 不需要等待则返回null，否则返回锁对象
@@ -34,18 +35,25 @@ public class LockTable {
             if(!u2x.containsKey(uid)) {
                 u2x.put(uid, xid);
                 putIntoList(x2u, xid, uid);
+                if(!u2l.containsKey(uid)) u2l.put(uid, new ReentrantLock());
+                u2l.get(uid).lock();
                 return null;
             }
-            waitU.put(xid, uid);
+            putIntoList(waitU, xid, uid);
             putIntoList(wait, uid, xid);//xid ,uid 修改，原来未xid，uid，调换了顺序
             if(hasDeadLock()) {
-                waitU.remove(xid);
+                removeFromList(waitU, xid, uid);
                 removeFromList(wait, uid, xid);
                 throw Error.DeadlockException;
             }
-            Lock l = new ReentrantLock();
+            Lock l = u2l.get(uid);
+            lock.unlock();
             l.lock();
-            waitLock.put(xid, l);
+            lock.lock();
+            u2x.put(uid, xid);
+            putIntoList(x2u, xid, uid);
+            removeFromList(waitU, xid, uid);
+            removeFromList(wait, uid, xid);
             return l;
 
         } finally {
@@ -57,42 +65,28 @@ public class LockTable {
         lock.lock();
         try {
             List<Long> l = x2u.get(xid);
+            waitU.remove(xid);
+            x2u.remove(xid);
             if(l != null) {
                 while(l.size() > 0) {
                     Long uid = l.remove(0);
-                    selectNewXID(uid);
+                    u2x.remove(uid);
+                    u2l.get(uid).unlock();
                 }
             }
-            waitU.remove(xid);
-            x2u.remove(xid);
-            waitLock.remove(xid);
-
         } finally {
             lock.unlock();
         }
     }
-
-    // 从等待队列中选择一个xid来占用uid
-    private void selectNewXID(long uid) {
-        u2x.remove(uid);
-        List<Long> l = wait.get(uid);
-        if(l == null) return;
-        assert l.size() > 0;
-
-        while(l.size() > 0) {
-            long xid = l.remove(0);
-            if(!waitLock.containsKey(xid)) {
-                continue;
-            } else {
-                u2x.put(uid, xid);
-                Lock lo = waitLock.remove(xid);
-                waitU.remove(xid);
-                lo.unlock();
-                break;
-            }
+    public void remove(long xid, long uid) {
+        lock.lock();
+        try {
+            removeFromList(x2u, xid, uid);
+            u2x.remove(uid);
+            u2l.get(uid).unlock();
+        } finally {
+            lock.unlock();
         }
-
-        if(l.size() == 0) wait.remove(uid);
     }
 
     private Map<Long, Integer> xidStamp;
@@ -123,12 +117,16 @@ public class LockTable {
             return false;
         }
         xidStamp.put(xid, stamp);
+        boolean res = false;
+        List<Long> uids = waitU.get(xid);
+        if(uids == null) return false;
+        for(Long uid : uids) {
+            Long x = u2x.get(uid);
+            assert x != null;
+            res = res || dfs(x);
+        }
+        return res;
 
-        Long uid = waitU.get(xid);
-        if(uid == null) return false;
-        Long x = u2x.get(uid);
-        assert x != null;
-        return dfs(x);
     }
 
     private void removeFromList(Map<Long, List<Long>> listMap, long uid0, long uid1) {

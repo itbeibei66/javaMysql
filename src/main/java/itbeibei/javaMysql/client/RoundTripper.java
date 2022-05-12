@@ -12,8 +12,11 @@ public class RoundTripper {
 
     public Package roundTrip(Package pkg) throws Exception {
         packager.send2(pkg);
-
         return packager.receive2();
+    }
+    public Package roundTrip2(Package pkg) throws  Exception {
+        packager.send(pkg);
+        return packager.receive();
     }
 
     public void close() throws Exception {
